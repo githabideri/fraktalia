@@ -11,12 +11,11 @@ YourRoom is a Matrix room for friends, powered by YourAgent agent.
 
 ## Access
 - Friends connect via **Tailscale Magic DNS**: `https://your-tailscale-or-public-url.example`
-- The local domain `your-server.example` is **not accessible** to friends (pihole/split DNS only)
-- Registration requires single-use tokens
-- Users end up as `@username:your-server.example` regardless of access URL
-- All rooms are **invite-only** - friends can't browse/join other rooms without explicit invite
+- If your homeserver uses a local/private domain, friends will need a way to reach it (Tailscale, VPN, public DNS, reverse proxy, etc.)
+- Registration can be restricted via tokens, invite-only, or disabled entirely
+- Rooms should be **invite-only** so friends can't browse other rooms on the server
 
-**Note:** Tailscale split DNS settings are per-user and NOT shared when sharing nodes. Friends must use Magic DNS.
+**Note:** If using Tailscale, remember that split DNS settings are per-user. Friends connecting via Tailscale should use the Magic DNS hostname or the machine's Tailscale IP.
 
 ---
 
