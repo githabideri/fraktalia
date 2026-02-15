@@ -67,7 +67,7 @@ fraktalia/
 
 ### Prerequisites
 - A machine to host everything (Linux, 4GB+ RAM, more for Docker builds)
-- [Matrix Synapse](https://matrix-org.github.io/synapse/latest/setup/installation.html) running
+- A [Matrix homeserver](https://element-hq.github.io/synapse/latest/setup/installation.html) running (Synapse, Conduit, Dendrite, etc.)
 - [OpenClaw](https://github.com/openclaw/openclaw) installed
 - Docker installed
 - (Optional) Tailscale for private access
