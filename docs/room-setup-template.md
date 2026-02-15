@@ -124,7 +124,7 @@ chmod 600 <your-admin-token-path>
 | Access LAN (192.168.x.x) | iptables DOCKER-USER rules |
 | Access Tailscale (100.x.x.x) | iptables DOCKER-USER rules |
 | Access localhost/Clawdbot | iptables blocks 127.0.0.0/8 |
-| Read host filesystem | Docker isolation, no bind mounts |
+| Read host filesystem | Docker isolation; only the agent workspace is mounted |
 | Escape container | No privileged mode, dropped caps |
 | Persist malware outside workspace | Container recreates, rootfs ephemeral |
 | Affect other agents/sessions | Separate container per agent |
@@ -502,5 +502,4 @@ clawdbot gateway restart
 4. Set up room monitor cron
 5. Created registration tokens for friends
 6. Added internet-only network access (agent-internet)
-7. Created secure admin user (`matrixadmin`) with token stored at `<your-admin-token-path>`
-8. Deactivated old `tokenchecker` user (password was exposed)
+7. Created secure admin user with token stored safely

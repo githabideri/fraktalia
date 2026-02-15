@@ -4,23 +4,22 @@
 
 ## What is this?
 
-Fraktalia is a recipe for running a private Matrix room where an AI agent (powered by [OpenClaw](https://github.com/openclaw/openclaw)) is a full participant — not a bot you @mention, but a member of the group who can see conversations, remember context, run code, SSH into devices, and create things.
+Fraktalia is a recipe for running a private, self-hosted group chat where an AI agent is a full participant — using [Matrix](https://matrix.org/) for the chat platform and [OpenClaw](https://github.com/openclaw/openclaw) for the AI agent.
 
-Friends connect via Tailscale (or any private network), chat in Element (or any Matrix client), and the agent participates naturally alongside everyone else.
+## Why Matrix?
 
-## Why?
+OpenClaw supports many messaging platforms — WhatsApp, Telegram, Discord, Signal, and more. Most people use one of those. So why bother with Matrix?
 
-Most AI chat setups are 1:1 — you talk to a bot, it talks back. That's useful but boring.
+**Control.** With WhatsApp or Telegram, you're giving an AI agent access to your real account on someone else's platform. Your conversations pass through their servers. You're bound by their terms of service. If they change their API, your setup breaks.
 
-What if your friend group had a shared AI that:
-- Remembers what you talked about last week
-- Can write and run code in a sandboxed environment
-- Has SSH access to hardware (a Raspberry Pi, a server, whatever)
-- Creates visualizations, analyzes data, fetches things from the web
-- Has its own personality and evolves over time
-- Runs on your infrastructure, not someone else's cloud
+With a self-hosted Matrix homeserver:
+- **Everything runs on your hardware.** Messages, media, encryption keys — all yours.
+- **The network is isolated.** Your homeserver doesn't need to be on the public internet. Friends connect via Tailscale or VPN.
+- **You control the accounts.** Create dedicated Matrix users, manage permissions, revoke access — no platform politics.
+- **The agent can administer the server.** OpenClaw agents can manage Matrix rooms, users, and permissions — your AI helps run the infrastructure it lives on.
+- **No vendor lock-in.** Matrix is an open, federated protocol. Any client works (Element, FluffyChat, etc.). You can federate with other servers or keep it fully private.
 
-That's what this sets up.
+**The tradeoff:** More setup than connecting a Telegram bot. This repo is here to make that setup manageable.
 
 ## Architecture
 

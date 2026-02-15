@@ -83,13 +83,54 @@ By default, OpenClaw creates a Docker bridge network for the sandbox. This provi
 - **Tailscale IPs** (100.x.x.x) won't be reachable from the bridge — Tailscale runs on the host, not in the container
 - **Options:** Use `network: "host"` (simple, less isolation), run Tailscale in the container, or SSH ProxyJump through the host
 
-## SSH Access
+## SSH Access & Network Reachability
 
-To give the agent SSH access to external machines:
+By default, the agent's Docker container sits on an isolated bridge network. It can reach the internet but **cannot reach your LAN or Tailscale devices** (100.x.x.x). This is a security feature — you don't want an AI agent with unrestricted access to your home network.
+
+But sometimes the agent *needs* to reach specific devices (a Raspberry Pi, a build server, etc.). There are several approaches:
+
+### Option 1: Tailscale in the container (recommended)
+
+Install Tailscale inside the container and authenticate it as its own node. This gives the agent a Tailscale identity you can control independently.
+
+**Why this is best:** You can use [Tailscale ACLs](https://tailscale.com/kb/1018/acls) to precisely control what the agent can reach:
+
+```jsonc
+// Example: agent can only SSH to the Pi, nothing else
+{
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["tag:agent"],
+      "dst": ["tag:iot-devices:22"]  // SSH only, specific devices only
+    }
+  ]
+}
+```
+
+This is far better than `network: "host"` which gives blanket access to everything.
+
+### Option 2: `network: "host"`
+
+The container shares the host's network stack, including Tailscale. Simple but gives the agent access to everything the host can reach. Only appropriate if you trust the agent fully or have other controls in place.
+
+### Option 3: SSH ProxyJump
+
+The container SSHs to the host first, then hops to the target. Keeps network isolation but requires the host to accept SSH from the container.
+
+```
+# .ssh/config
+Host target-device
+    HostName 100.x.x.x
+    User pi
+    ProxyJump host-user@172.17.0.1  # Docker gateway IP
+```
+
+### Setting up SSH keys
 
 1. Generate a key pair in the agent's workspace: `.ssh/id_ed25519`
-2. Deploy the public key to the target
-3. Create `.ssh/config` with connection details
+2. Deploy the public key to the target machine
+3. Create `.ssh/config` with connection details and (optionally) ControlMaster multiplexing
 4. Set permissions: `chmod 700 .ssh && chmod 600 .ssh/id_ed25519`
 
-The container needs a `/etc/passwd` entry for the running UID, or SSH will fail with "No user exists for uid X". This is handled by the `useradd` in the Dockerfile.
+**Important:** The container needs a `/etc/passwd` entry for the running UID, or SSH will fail with "No user exists for uid X". This is handled by the `useradd` in the Dockerfile.
