@@ -1,0 +1,12 @@
+[Unit]
+Description=Mox Network Firewall (block LAN access)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/lib/clawdbot/workspace/scripts/mox-network-firewall.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
