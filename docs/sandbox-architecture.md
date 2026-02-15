@@ -1,61 +1,95 @@
-# Mox Sandbox Architecture
+# Sandbox Architecture
 
 ## Overview
-Mox runs in a Docker container managed by OpenClaw's sandbox system. The container provides full isolation with network access controlled by Docker networking and Tailscale ACLs.
 
-## Image: `mox-sandbox:latest`
-- **Base:** `clawdbot-sandbox:bookworm-slim`
-- **Packages:** 692 (Python 3.11, Node 18, ffmpeg 5.1.8, openssh-client, git, jq, ripgrep, pandoc, curl, sudo)
-- **No texlive** — causes OOM during post-install format generation even at 16GB
-- **User:** `mox` (UID 996, GID 1100 `openclaw-agents`)
-- **Dockerfile:** `docker/mox-sandbox/Dockerfile`
+The agent runs inside a Docker container managed by OpenClaw's sandbox system. This gives the agent a full Linux environment (shell, Python, Node, ffmpeg, etc.) while keeping it isolated from the host.
 
-## Permission Model
+## How it works
 
-Two systems write to the workspace:
-1. **Host-side** OpenClaw Write/Edit tools → run as `clawdbot` (UID 996)
-2. **Container-side** shell commands → run as `mox` (UID 996, GID 1100)
+Two systems write to the agent's workspace:
 
-Both use UID 996, so no permission conflicts. Workspace is owned `clawdbot:openclaw-agents` (996:1100) with mode 775.
+1. **Host-side tools** (OpenClaw's Write/Edit) — run as the host service user
+2. **Container-side shell** (exec tool) — run as the container user
 
-### OpenClaw Config (agents.list)
+If these run as different UIDs, you get permission conflicts. The solution:
+
+### Matching UIDs
+
+Create a user inside the Docker image with the **same UID** as your host service user:
+
+```dockerfile
+# Example: host service runs as UID 1000, GID 1000
+RUN groupadd -g 1000 agent-group && \
+    useradd -u 1000 -g 1000 -d /workspace -s /bin/bash -M agent
+```
+
+Then configure OpenClaw to run the container as that user:
+
 ```json
 {
   "sandbox": {
-    "mode": "all",
-    "workspaceAccess": "rw",
     "docker": {
-      "image": "mox-sandbox:latest",
-      "network": "mox-internet",
-      "user": "996:1100",
-      "readOnlyRoot": false
+      "user": "1000:1000"
     }
   }
 }
 ```
 
+Set workspace ownership to match:
+```bash
+chown -R 1000:1000 /path/to/agent/workspace
+chmod -R 775 /path/to/agent/workspace
+```
+
+## Docker Image
+
+The included Dockerfile builds a general-purpose sandbox with ~690 packages:
+
+| Category | Packages |
+|----------|----------|
+| Languages | Python 3.11, Node 18 |
+| Media | ffmpeg, cairo, pango |
+| Dev tools | git, jq, ripgrep, curl, wget |
+| Documents | pandoc |
+| Network | openssh-client |
+| Package mgmt | pip, uv, npm |
+
+### What's NOT included (and why)
+
+- **texlive** — The `Building format(s) --all` post-install step consumes enormous memory (OOM at 16GB). Install at runtime if needed.
+- **manim** — Dependencies are present (cairo, pango, ffmpeg), but pip install is left to the user/agent.
+- **GUI tools** — No X11/display. This is a headless environment.
+
 ## Build Requirements
-- **16GB+ host memory** for Docker builds with 600+ packages (export phase is memory-intensive)
-- Build time: ~165s (105s apt install + 48s export + 12s unpack)
-- Adding a single package to the apt layer invalidates cache for the entire layer
+
+- **Memory:** 16GB+ host RAM for builds with 600+ packages. The Docker export phase is the bottleneck.
+- **Disk:** ~2.5GB for the final image
+- **Time:** ~3 minutes (download + install + export)
+- **Cache:** Adding a single package to the apt layer invalidates the entire layer. Group carefully.
 
 ## Known Limitations
 
 | Issue | Detail | Workaround |
 |-------|--------|------------|
-| `no-new-privileges` | Hardcoded in OpenClaw (`docker.ts:161`), no config toggle | Can't use sudo; bake everything into image |
-| texlive OOM | `Building format(s) --all` kills at 16GB | Don't include texlive; install at runtime if needed |
-| pip PEP 668 | System Python refuses pip install | Use `--break-system-packages` flag |
-| uv path | Installed at `/root/.local/bin` during build (as root) | Not in mox's PATH; use pip instead |
-| Binary file transfer | Write tool is text-only | Binary files from SSH stay in /tmp, can't be sent as attachments |
-| config.patch arrays | Destroys entire agents.list | Use surgical Edit tool for per-agent config changes |
+| `no-new-privileges` | Hardcoded in OpenClaw sandbox. No config toggle. | Can't use sudo. Bake everything into the image. |
+| pip PEP 668 | System Python refuses global pip install | Use `--break-system-packages` flag |
+| Binary file transfer | OpenClaw's Write tool is text-only | Binary files from SSH/downloads stay in container `/tmp/` |
+| Config array editing | `config.patch` API destroys `agents.list` arrays | Use surgical file edits for per-agent config changes |
 
 ## Network
-- `mox-internet` Docker bridge: open outbound, Tailscale ACLs restrict
-- Tailscale IPs (100.x.x.x) may not be reachable from bridge network
-- Options: `network: "host"`, Tailscale in container, or SSH ProxyJump
 
-## SSH
-- Keys: `agents/mox/.ssh/id_ed25519_vogl`
-- Config: `agents/mox/.ssh/config` (ControlMaster multiplexing)
-- Target: `vogl@100.87.103.34` (Raspberry Pi, vogelhaus project)
+By default, OpenClaw creates a Docker bridge network for the sandbox. This provides internet access but:
+
+- **Tailscale IPs** (100.x.x.x) won't be reachable from the bridge — Tailscale runs on the host, not in the container
+- **Options:** Use `network: "host"` (simple, less isolation), run Tailscale in the container, or SSH ProxyJump through the host
+
+## SSH Access
+
+To give the agent SSH access to external machines:
+
+1. Generate a key pair in the agent's workspace: `.ssh/id_ed25519`
+2. Deploy the public key to the target
+3. Create `.ssh/config` with connection details
+4. Set permissions: `chmod 700 .ssh && chmod 600 .ssh/id_ed25519`
+
+The container needs a `/etc/passwd` entry for the running UID, or SSH will fail with "No user exists for uid X". This is handled by the `useradd` in the Dockerfile.
