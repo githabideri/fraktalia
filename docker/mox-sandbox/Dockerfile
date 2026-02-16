@@ -26,6 +26,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango1.0-dev \
     pkg-config \
     libcairo2-dev \
+    # Build tools (needed for pycairo, etc.)
+    build-essential \
+    meson \
+    python3-dev \
+    # Image processing
+    imagemagick \
+    # Computer Vision
+    libopencv-dev \
+    python3-opencv \
+    # Fonts
+    fonts-liberation \
+    fonts-noto \
+    # LaTeX (base only — full texlive is too large)
+    texlive-latex-base \
+    texlive-fonts-recommended \
+    # Audio dev
+    libsndfile1-dev \
+    # 3D rendering
+    blender \
     # CLI utilities
     jq \
     ripgrep \
@@ -48,6 +67,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Add uv to PATH for all users
 ENV PATH="/root/.local/bin:/home/mox/.local/bin:$PATH"
+
+# Pre-install manim (avoids repeated compile at runtime)
+RUN uv pip install --system --break-system-packages manim
 
 # Verify installations
 RUN curl --version | head -1 && \

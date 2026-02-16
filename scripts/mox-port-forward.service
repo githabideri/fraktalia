@@ -1,0 +1,17 @@
+[Unit]
+Description=Fraktalia Port Forwarder (Mox sandbox → host)
+After=network.target docker.service openclaw.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=clawdbot
+Group=clawdbot
+ExecStart=/usr/bin/python3 /var/lib/clawdbot/workspace/fraktalia/scripts/mox-port-forward.py 9000
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/lib/clawdbot/workspace/fraktalia/logs/port-forward.log
+StandardError=append:/var/lib/clawdbot/workspace/fraktalia/logs/port-forward.log
+
+[Install]
+WantedBy=multi-user.target

@@ -57,9 +57,11 @@ fraktalia/
 ├── docs/
 │   ├── sandbox-architecture.md        ← permission model, build notes, gotchas
 │   └── room-setup-template.md         ← step-by-step setup template
-└── scripts/
-    ├── mox-network-firewall.sh        ← network isolation script
-    └── mox-firewall.service           ← systemd service for above
+├── scripts/
+│   ├── mox-network-firewall.sh        ← network isolation script
+│   ├── mox-firewall.service           ← systemd service for above
+│   └── mox-port-forward.py           ← TCP forwarder: host → sandbox container
+└── logs/                              ← runtime logs (gitignored)
 ```
 
 ## Quick Start
@@ -116,6 +118,37 @@ Add a binding so the agent responds in your room:
 ### 4. Invite friends
 
 Set up Tailscale (or another private network), create Matrix accounts for friends, and invite them to the room. The agent will be there waiting.
+
+## Port Forwarding (Exposing Sandbox Services)
+
+The sandbox container runs on an isolated Docker network. To make web services (or anything else) inside the container accessible from the host, LAN, or Tailscale, use the port forwarder:
+
+```bash
+# Forward host:9000 → container:9000
+python3 scripts/mox-port-forward.py 9000
+
+# Forward multiple ports
+python3 scripts/mox-port-forward.py 9000 9001 9002
+```
+
+**Port range:** `9000-9099` is reserved for Fraktalia services. The forwarder enforces this range to avoid collisions with other host services.
+
+**How it works:**
+- Resolves the container IP dynamically via `docker inspect` on each incoming connection
+- Survives container recreation (OpenClaw recreates sandbox containers on restart)
+- No root required, no iptables, no extra containers
+
+**Making it persistent:** Add to your system startup (root required):
+
+```bash
+# In /etc/rc.local or a systemd service:
+su - clawdbot -c 'nohup python3 /path/to/fraktalia/scripts/mox-port-forward.py 9000 \
+    >> /path/to/fraktalia/logs/port-forward.log 2>&1 &'
+```
+
+**Accessing from Tailscale:** Once forwarding, services are available at `http://clawdbot:9000` (or whatever MagicDNS name your host has).
+
+**Convention:** Tell your agent to bind web servers to port 9000+ inside the container, not 8080 or other common ports that may conflict on the host.
 
 ## Lessons Learned
 
