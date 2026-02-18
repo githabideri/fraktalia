@@ -258,6 +258,42 @@ This creates a **one-way sync**: your edits in the main workspace overwrite the 
 - You trust the agent (personal assistant vs public-facing bot)
 - You want simplicity
 
+### Workspace Files
+
+OpenClaw auto-loads certain files from the agent's workspace at session start:
+
+| File | Purpose | Agent Can Edit? |
+|------|---------|-----------------|
+| **AGENTS.md** | Environment context, tools, constraints | ✅ (with direct mount) |
+| **SOUL.md** | Personality, tone, boundaries | ✅ (with direct mount) |
+| **IDENTITY.md** | Name, pronouns, creature | ✅ (with direct mount) |
+| **USER.md** | User profile and preferences | ✅ (with direct mount) |
+| **TOOLS.md** | User notes about external tools | ✅ (with direct mount) |
+| **HEARTBEAT.md** | Checklist for heartbeat runs | ✅ (with direct mount) |
+| **MEMORY.md** | Persistent context (hardware, projects, workflows) | ✅ (with direct mount) |
+| **memory/YYYY-MM-DD.md** | Daily session logs (NOT auto-loaded) | ✅ Always |
+
+**MEMORY.md vs memory/ daily logs:**
+
+| MEMORY.md | memory/YYYY-MM-DD.md |
+|-----------|----------------------|
+| Persistent reference info | Daily chronological logs |
+| Auto-loaded every session | Only loaded via memory_search |
+| Hardware specs, workflows, gotchas | Session events, decisions, jokes |
+| Update when something important changes | Created/updated daily |
+| Keep concise and evergreen | Can be verbose |
+
+**Privacy note:** Official OpenClaw guidance recommends only loading MEMORY.md in private 1:1 sessions to prevent personal data leakage. For **private friend groups** (like Fraktalia), this is a deliberate trade-off: convenience and continuity over strict privacy boundaries. Ensure MEMORY.md contains only info appropriate for the group context.
+
+**What to put in MEMORY.md:**
+- ✅ Hardware/infrastructure details
+- ✅ Current project status and goals
+- ✅ Important workflows and conventions
+- ✅ Critical troubleshooting notes
+- ❌ Sensitive personal info
+- ❌ Daily logs (use memory/ for that)
+- ❌ Temporary details
+
 ---
 
 ## Room Lifecycle & Maintenance
