@@ -202,59 +202,61 @@ docker build -t agent-sandbox:latest .
 
 ## Workspace Architecture
 
-### Two Workspaces (by design)
+### Default: Direct Mount (Self-Improvement Enabled)
 
-YourAgent has **two separate workspace directories**:
+By default, the agent's workspace is **mounted directly** into the container:
 
-| Location | Purpose | Edited by |
-|----------|---------|-----------|
-| `<workspace>/agents/your-agent/` | Main workspace (admin config) | You |
-| `<clawdbot-data>/sandboxes/agent-your-agent-{hash}/` | Sandbox workspace (runtime) | YourAgent |
+```json
+{
+  "workspace": "/path/to/agents/your-agent",
+  "sandbox": {
+    "workspaceAccess": "rw"
+  }
+}
+```
 
-### Why Two Workspaces?
+**What this means:**
+- Agent can edit AGENTS.md, SOUL.md, MEMORY.md, etc.
+- Changes **persist immediately** to the host filesystem
+- Agent has **full self-improvement capability**
+- No sync, no overwrites, no complexity
 
-**Security isolation.** The sandbox is designed to prevent a compromised/misbehaving agent from:
-- Modifying its own instructions to escape restrictions
-- Affecting other agents' workspaces
-- Persisting malicious changes to admin-controlled files
+**Editing workflow:**
+- Agent edits files → changes appear on host instantly
+- You can also edit files on the host → changes appear in container on next file read
+- Both sides see the same files
 
-### Sync Behavior
+### Optional: One-Way Sync (Admin Control)
 
-- **One-way sync:** Main → Sandbox (on container start via `setupCommand`)
-- **No reverse sync:** Sandbox changes don't flow back to main
-- **Sync scope:** Only `*.md` config files (AGENTS.md, SOUL.md, etc.)
+If you want to **prevent** the agent from modifying its own instructions, use a `setupCommand` to copy files at container start:
 
-### What Goes Where
+```json
+{
+  "sandbox": {
+    "docker": {
+      "setupCommand": "cp /host-workspace/*.md /workspace/ 2>/dev/null || true"
+    }
+  }
+}
+```
 
-| File type | Location | Sync behavior |
-|-----------|----------|---------------|
-| `AGENTS.md`, `SOUL.md`, `TOOLS.md` | Edit in main | Synced to sandbox on start |
-| `memory/` | Sandbox only | Never synced (YourAgent's notes) |
-| Code/files YourAgent creates | Sandbox only | Persists, never synced |
+This creates a **one-way sync**: your edits in the main workspace overwrite the agent's changes on every container restart.
 
-### Design Decision: No Self-Improvement
+**Trade-offs:**
+- ✅ Admin controls personality/instructions
+- ✅ Agent can't persist prompt injection
+- ❌ Agent can't evolve its own behavior
+- ❌ More complex mental model
 
-We chose **admin-controlled instructions** over self-improvement:
+**When to use this:**
+- You want strict control over the agent's persona
+- You're worried about prompt injection persistence
+- You prefer predictability over autonomy
 
-**Option A (chosen):** Admin edits config → synced to sandbox → overwrites any YourAgent changes
-- ✅ Predictable behavior
-- ✅ Admin always in control
-- ✅ Simple mental model
-- ❌ YourAgent can't evolve its own instructions
-
-**Option B (rejected):** Bidirectional sync / self-improvement
-- ✅ YourAgent could refine its own personality/instructions
-- ❌ Unpredictable behavior over time
-- ❌ Complex merge conflicts
-- ❌ Security risk (prompt injection persistence)
-
-For a friend-facing chat agent, predictability > autonomy.
-
-### Editing Workflow
-
-1. Edit files in **main workspace**: `<workspace>/agents/your-agent/`
-2. Changes apply on next container start (or manual session reset)
-3. Never edit the sandbox directory directly (changes will be overwritten)
+**When NOT to use this:**
+- You want the agent to learn and adapt
+- You trust the agent (personal assistant vs public-facing bot)
+- You want simplicity
 
 ---
 
