@@ -1,0 +1,30 @@
+[Unit]
+Description=Fractal API - OpenClaw Dynamic Agent Management
+After=network.target openclaw-gateway.service matrix-synapse.target
+Wants=openclaw-gateway.service
+
+[Service]
+Type=simple
+User=clawdbot
+Group=clawdbot
+WorkingDirectory=/var/lib/clawdbot/workspace/fraktalia/fractal-api
+ExecStart=/usr/bin/node /var/lib/clawdbot/workspace/fraktalia/fractal-api/server.js
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fractal-api
+
+# Environment
+Environment="NODE_ENV=production"
+
+[Install]
+WantedBy=multi-user.target

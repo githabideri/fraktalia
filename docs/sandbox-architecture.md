@@ -83,6 +83,20 @@ By default, OpenClaw creates a Docker bridge network for the sandbox. This provi
 - **Tailscale IPs** (100.x.x.x) won't be reachable from the bridge — Tailscale runs on the host, not in the container
 - **Options:** Use `network: "host"` (simple, less isolation), run Tailscale in the container, or SSH ProxyJump through the host
 
+## Remote Docker (Two-LXC Model)
+
+> **Added 2026-02-21**
+
+In the two-LXC architecture, the agent's Docker containers run on a separate LXC (Mox LXC) while OpenClaw stays on the admin LXC. This requires:
+
+1. **Docker TCP exposure** on Mox LXC — the Docker daemon listens on a TCP port (firewalled to the admin LXC only)
+2. **OpenClaw `dockerHost` patch** — adds a per-agent `dockerHost` config field so OpenClaw sends Docker commands to the remote daemon via `DOCKER_HOST=tcp://...`
+3. **Workspace on Mox LXC** — since Docker bind-mounts are local to the daemon's host, workspaces must live on Mox LXC. the admin LXC mounts them via sshfs for OpenClaw to read config files.
+
+**Other agents are unaffected.** Only agents with `dockerHost` set use the remote daemon; all others continue using the local Docker socket on the admin LXC.
+
+See `docs/openclaw-docker-host-patch.md` for the full patch specification.
+
 ## SSH Access & Network Reachability
 
 By default, the agent's Docker container sits on an isolated bridge network. It can reach the internet but **cannot reach your LAN or Tailscale devices** (100.x.x.x). This is a security feature — you don't want an AI agent with unrestricted access to your home network.

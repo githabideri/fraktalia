@@ -1,0 +1,45 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 18790
+  },
+  "auth": {
+    "secret": "CHANGE_ME_STRONG_SECRET_TOKEN"
+  },
+  "matrix": {
+    "baseUrl": "http://localhost:8008",
+    "homeserver": "your-homeserver.example.com",
+    "botToken": "<your-bot-token>",
+    "adminToken": "<your-admin-token>",
+    "botUserId": "@yourbot:your-homeserver.example.com",
+    "paddingUser": "@admin:your-homeserver.example.com"
+  },
+  "openclaw": {
+    "gatewayCommand": "openclaw gateway",
+    "catchAllAgentId": "main-agent"
+  },
+  "workspace": {
+    "baseDir": "<openclaw-data>/workspace/agents",
+    "owner": "openclaw:openclaw",
+    "permissions": "775"
+  },
+  "registry": {
+    "dataFile": "<openclaw-data>/.openclaw/fractal-registry.json"
+  },
+  "limits": {
+    "maxFractals": 5,
+    "minAgentsCount": 12
+  },
+  "agentDefaults": {
+    "sandbox": {
+      "mode": "all",
+      "workspaceAccess": "rw",
+      "docker": {
+        "image": "agent-sandbox:latest",
+        "network": "agent-internet",
+        "user": "996:1100",
+        "readOnlyRoot": false
+      }
+    }
+  }
+}

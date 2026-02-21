@@ -1,0 +1,11 @@
+# Secrets and runtime data
+config.json
+fractal-api.log
+*.log
+
+# Node modules (if added later)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
